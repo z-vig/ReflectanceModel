@@ -5,13 +5,16 @@ This module simulates one round of space weathering via micrometeorite bombardme
 import numpy as np
 from tqdm import tqdm
 
+MIN_REG_POROSITY = 0.3
+MAX_REG_POROSITY = 0.83
+
 class SimFrame:
     def __init__(self,frame_size:tuple,weather_rate:float,crater_rate:float,sim_length:int):
         self.fs = frame_size
         self.wr = weather_rate
         self.cr = crater_rate
         self.sl = sim_length
-        self.frame = np.zeros(self.fs)
+        self.frame = MIN_REG_POROSITY*np.ones(self.fs)
         self.anim_arr = np.zeros((*self.frame.shape,sim_length))
     
     def __str__(self) -> str:
@@ -21,7 +24,10 @@ class SimFrame:
         return f'SimFrame({self.wr},{self.cr},{self.sl})'
 
     def simstep(self):
-        self.frame += self.wr
+        if (self.frame>=MAX_REG_POROSITY).any():
+            pass
+        else:
+            self.frame += self.wr
 
         x = np.arange(self.frame.shape[0])
         y = np.arange(self.frame.shape[1])
@@ -32,15 +38,14 @@ class SimFrame:
             cx = np.random.choice(x)
             cy = np.random.choice(y)
             r = np.random.choice(r_range,p=exp_dist/np.sum(exp_dist))
-            self.frame[(x[np.newaxis,:]-cx)**2+(y[:,np.newaxis]-cy)**2 < r**2] = 0
+            self.frame[(x[np.newaxis,:]-cx)**2+(y[:,np.newaxis]-cy)**2 < r**2] = MIN_REG_POROSITY
     
     def runsim(self):
-        for i in tqdm(range(self.sl)):
+        for i in range(self.sl):
             self.anim_arr[:,:,i] = self.frame
             self.simstep()
         return self.anim_arr
-        
-
+    
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
@@ -55,7 +60,8 @@ if __name__ == "__main__":
     fig,ax = plt.subplots(1,1)
     for i in np.arange(animarr.shape[2]):
         im_art = ax.imshow(animarr[:,:,i],vmin=0,vmax=1,cmap='Reds')
-        art_list.append([im_art])
+        im_text = ax.text(xsize/2,ysize/2,f'Step = {i}')
+        art_list.append([im_art,im_text])
     
     anim = ArtistAnimation(fig,art_list,interval=50,blit=True,repeat=False)
 
